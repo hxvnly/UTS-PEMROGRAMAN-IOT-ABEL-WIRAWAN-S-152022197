@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Sensor Hidroponik</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
+        h2 { color: #4CAF50; }
+        pre { background-color: #282c34; color: #ffffff; padding: 20px; border-radius: 8px; }
+        .form { margin-top: 20px; }
+        .form input { padding: 8px; margin: 5px; }
+        .form button { padding: 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        .form button:hover { background-color: #45a049; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        table, th, td { border: 1px solid #ddd; }
+        th, td { padding: 8px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+    </style>
+</head>
+<body>
+    <h2>Data Sensor Hidroponik</h2>
+
+    <!-- Display parsed data as a table -->
+    <div id="parsedData">
+        <h3>Data Sensor Terbaru</h3>
+        <table id="sensorTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Suhu</th>
+                    <th>Kelembapan</th>
+                    <th>Kecerahan</th>
+                    <th>Waktu</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data rows will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- View raw JSON data -->
+    <h3>Raw JSON Data</h3>
+    <pre id="jsonOutput">Loading data...</pre>
+
+    <div class="form">
+        <h3>Kirim Data Baru</h3>
+        <input type="number" id="suhu" placeholder="Suhu">
+        <input type="number" id="kelembapan" placeholder="Kelembapan">
+        <input type="number" id="kecerahan" placeholder="Kecerahan">
+        <button onclick="sendData()">Kirim Data</button>
+    </div>
+
+    <button onclick="fetchData()">Refresh Data</button>
+
+    <script>
+        async function fetchData() {
+            try {
+                const response = await fetch('/data');
+                const data = await response.json();
+                displayParsedData(data); // Display parsed data in table
+                document.getElementById('jsonOutput').textContent = JSON.stringify(data, null, 2); // Show raw JSON
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                alert('Gagal mengambil data dari server');
+            }
+        }
+
+        async function sendData() {
+            const suhu = document.getElementById('suhu').value;
+            const kelembapan = document.getElementById('kelembapan').value;
+            const kecerahan = document.getElementById('kecerahan').value;
+
+            if (!suhu || !kelembapan || !kecerahan) {
+                alert('Mohon lengkapi semua data!');
+                return;
+            }
+
+            try {
+                const response = await fetch('/add-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ suhu: parseFloat(suhu), kelembapan: parseFloat(kelembapan), kecerahan: parseFloat(kecerahan) })
+                });
+
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || 'Gagal mengirim data ke server');
+                }
+
+                alert(result.message);
+                fetchData(); // Refresh data setelah mengirim data baru
+            } catch (error) {
+                console.error('Error sending data:', error);
+                alert(error.message);
+            }
+        }
+
+        function displayParsedData(data) {
+            const sensorTable = document.getElementById('sensorTable').getElementsByTagName('tbody')[0];
+            // Clear previous data
+            sensorTable.innerHTML = '';
+
+            // Loop through the sensor data and append rows to the table
+            if (data.sensor_data) {
+                data.sensor_data.forEach(item => {
+                    const row = sensorTable.insertRow();
+                    row.innerHTML = `
+                        <td>${item.id}</td>
+                        <td>${item.suhu}</td>
+                        <td>${item.kelembapan}</td>
+                        <td>${item.kecerahan}</td>
+                        <td>${item.waktu}</td>
+                    `;
+                });
+            }
+        }
+
+        window.onload = fetchData;
+    </script>
+</body>
+</html>
